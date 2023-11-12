@@ -1,94 +1,74 @@
 import numpy as np
 
 class Perceptron:
-    def __init__(self, n_inputs, epochs=1000, learning_rate=0.01):
-        self.weights = np.zeros(n_inputs + 1) 
-        self.epochs = epochs
-        self.learning_rate = learning_rate
+    # Inicializa o perceptron com o número de entradas, épocas e taxa de aprendizado
+    def __init__(self, num_entradas, epocas=1000, taxa_aprendizado=0.01):
+        self.pesos = np.zeros(num_entradas + 1)  # Inicializa os pesos com zeros
+        self.epocas = epocas  # Define o número de épocas para treinamento
+        self.taxa_aprendizado = taxa_aprendizado  # Define a taxa de aprendizado
 
-    def activation_fn(self, x):
+    # Função de ativação (degrau) que retorna 1 se x >= 0, senão retorna 0
+    def funcao_ativacao(self, x):
         return 1 if x >= 0 else 0
 
-    def predict(self, inputs):
-        summation = np.dot(inputs, self.weights[1:]) + self.weights[0]
-        return self.activation_fn(summation)
+    # Função para prever a saída para entradas dadas
+    def prever(self, entradas):
+        somatorio = np.dot(entradas, self.pesos[1:]) + self.pesos[0]  # Calcula o somatório ponderado
+        return self.funcao_ativacao(somatorio)  # Aplica a função de ativação
 
-    def train(self, training_inputs, labels):
-        for _ in range(self.epochs):
-            for inputs, label in zip(training_inputs, labels):
-                prediction = self.predict(inputs)
-                self.weights[1:] += self.learning_rate * (label - prediction) * inputs
-                self.weights[0] += self.learning_rate * (label - prediction)
+    # Função para treinar o perceptron usando as entradas e rótulos fornecidos
+    def treinar(self, entradas_treino, rotulos):
+        for _ in range(self.epocas):  # Itera sobre o número definido de épocas
+            for entradas, rotulo in zip(entradas_treino, rotulos):  # Itera sobre cada exemplo de treino
+                previsao = self.prever(entradas)  # Faz a previsão
+                # Ajusta os pesos com base no erro (diferença entre rótulo e previsão)
+                self.pesos[1:] += self.taxa_aprendizado * (rotulo - previsao) * entradas
+                self.pesos[0] += self.taxa_aprendizado * (rotulo - previsao)
 
-def create_data(n, func):
-    training_inputs = np.array([list(map(int, "{:0{width}b}".format(i, width=n))) for i in range(2**n)])
+def criar_dados(n, func):
+    # Gera dados de treinamento para operações lógicas (AND, OR, XOR)
+    entradas_treino = np.array([list(map(int, "{:0{width}b}".format(i, width=n))) for i in range(2**n)])
+    # Determina os rótulos com base na função lógica escolhida
     if func == "AND":
-        labels = np.all(training_inputs, axis=1).astype(int)
+        rotulos = np.all(entradas_treino, axis=1).astype(int)
     elif func == "OR":
-        labels = np.any(training_inputs, axis=1).astype(int)
+        rotulos = np.any(entradas_treino, axis=1).astype(int)
+    elif func == "XOR":
+        rotulos = np.array([0 if np.sum(x) % 2 == 0 else 1 for x in entradas_treino])
     else:
-        raise ValueError("Function not recognized. Use 'AND' or 'OR'.")
-    return training_inputs, labels
-  
-#função create_data para incluir a operação XOR
-def create_data_xor(n):
-    training_inputs = np.array([list(map(int, "{:0{width}b}".format(i, width=n))) for i in range(2**n)])
-    labels = np.array([0 if np.sum(x) % 2 == 0 else 1 for x in training_inputs])
-    return training_inputs, labels
-training_inputs, labels = create_data_xor(2)
+        raise ValueError("Função não reconhecida. Use 'AND', 'OR' ou 'XOR'.")
+    return entradas_treino, rotulos
 
+def imprimir_resultados(nome_funcao, entradas_treino, rotulos, previsoes):
+    # Imprime os resultados do treinamento em um formato legível
+    print(f"__{nome_funcao}___")
+    print("Entradas\tEsperado\tPrevisto")
+    print("-" * 30)
+    for entrada, rotulo, previsao in zip(entradas_treino, rotulos, previsoes):
+        entrada_str = ' '.join(map(str, entrada))
+        print(f"{entrada_str}\t\t{rotulo}\t\t{previsao}")
+
+# Abaixo estão os exemplos de uso do Perceptron para as operações lógicas XOR, OR e AND.
+# Cada bloco cria dados de treinamento para a operação lógica correspondente,
+# treina um Perceptron e imprime os resultados.
+
+# Testando o Perceptron para XOR
+entradas_treino, rotulos = criar_dados(2, "XOR")
 perceptron_xor = Perceptron(2)
-perceptron_xor.train(training_inputs, labels)
-predictions_xor = np.array([perceptron_xor.predict(x) for x in training_inputs])
-print("__XOR___")
-print("Inputs\tExpected\tPredicted")
-print("-" * 30)
-for i, (inp, label, prediction) in enumerate(zip(training_inputs, labels, predictions_xor)):
-    inputs_str = ' '.join(map(str, inp))
-    print(f"{inputs_str}\t\t{label}\t\t{prediction}")
+perceptron_xor.treinar(entradas_treino, rotulos)
+previsoes_xor = np.array([perceptron_xor.prever(x) for x in entradas_treino])
+imprimir_resultados("XOR", entradas_treino, rotulos, previsoes_xor)
 
-# Vamos verificar também se todas as previsões são corretas
-all_predictions_correct = np.all(predictions_xor == labels)
-all_predictions_correct, predictions_xor, labels
+# Testando o Perceptron para OR
+entradas_treino, rotulos = criar_dados(4, "OR")
+perceptron_or = Perceptron(4)
+perceptron_or.treinar(entradas_treino, rotulos)
+previsoes_or = np.array([perceptron_or.prever(x) for x in entradas_treino])
+imprimir_resultados("OR", entradas_treino, rotulos, previsoes_or)
 
-# Criar dados de treinamento para a funçãoa OR com 4 entradas
-training_inputs, labels = create_data(4, "OR")
-
-# Instanciar e treinar o Perceptron
-perceptron = Perceptron(4)
-perceptron.train(training_inputs, labels)
-
-# Testar o Perceptron
-predictions = np.array([perceptron.predict(x) for x in training_inputs])
-
-# Imprimir cabeçalho da tabela
-print("__OR___")
-print("Inputs\t\tExpected\tPredicted")
-print("-" * 30)
-
-# Iterar sobre cada conjunto de entrada, rótulo e previsão e imprimi-los
-for i, (inp, label, prediction) in enumerate(zip(training_inputs, labels, predictions)):
-    # Converter a entrada de array para string para impressão
-    inputs_str = ' '.join(map(str, inp))
-    print(f"{inputs_str}\t\t{label}\t\t{prediction}")
-
-# Criar dados de treinamento para a função AND com 3 entradas
-training_inputs, labels = create_data(3, "AND")
-
-# Instanciar e treinar o Perceptron
-perceptron = Perceptron(3)
-perceptron.train(training_inputs, labels)
-
-# Testar o Perceptron
-predictions = np.array([perceptron.predict(x) for x in training_inputs])
-
-# Imprimir cabeçalho da tabela
-print("\n__AND___")
-print("Inputs\t\tExpected\tPredicted")
-print("-" * 33)
-
-# Iterar sobre cada conjunto de entrada, rótulo e previsão e imprimi-los
-for i, (inp, label, prediction) in enumerate(zip(training_inputs, labels, predictions)):
-    # Converter a entrada de array para string para impressão
-    inputs_str = ' '.join(map(str, inp))
-    print(f"{inputs_str}\t\t\t{label}\t\t\t{prediction}")
+# Testando o Perceptron para AND
+entradas_treino, rotulos = criar_dados(3, "AND")
+perceptron_and = Perceptron(3)
+perceptron_and.treinar(entradas_treino, rotulos)
+previsoes_and = np.array([perceptron_and.prever(x) for x in entradas_treino])
+imprimir_resultados("AND", entradas_treino, rotulos, previsoes_and)
